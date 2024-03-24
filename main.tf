@@ -212,11 +212,11 @@ resource "aws_iam_role_policy" "eks_pods_role_policy" {
       },
       {
         Action = [
-          "sns:ListTopics"
+          "sns:ListTopics",
           "sns:DeleteTopic",
           "sns:CreateTopic",
           "sns:GetTopicAttributes",
-          "sns:Subscribe"
+          "sns:Subscribe",
           "sns:ListSubscriptions",
           "sns:ListSubscriptionsByTopic",
           "sns:ConfirmSubscription",
