@@ -209,6 +209,21 @@ resource "aws_iam_role_policy" "eks_pods_role_policy" {
         ]
         Effect   =  "Allow"
         Resource =  "*"
+      },
+      {
+        Action = [
+          "sns:ListTopics"
+          "sns:DeleteTopic",
+          "sns:CreateTopic",
+          "sns:GetTopicAttributes",
+          "sns:Subscribe"
+          "sns:ListSubscriptions",
+          "sns:ListSubscriptionsByTopic",
+          "sns:ConfirmSubscription",
+          "sns:Publish"
+        ]
+        Effect   =  "Allow"
+        Resource =  "*"
       }
     ]
   })
