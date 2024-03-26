@@ -9,7 +9,7 @@ on:
     paths:
       - "**.tf"
       - "**.tfvars"
-      - "infra-ci.yml"
+      - "**.yml"
 
 jobs:
   terraform-plan:
