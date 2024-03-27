@@ -9,7 +9,7 @@ on:
     paths:
       - "**.tf"
       - "**.tfvars"
-      - "infra-ci.yml"
+      - "**.yml"
 
 jobs:
   terraform-plan:
@@ -37,6 +37,9 @@ jobs:
       - name: validate
         run: terraform validate
         working-directory: "."
+      
+      - name: Exporting kube config
+        run: export KUBE_CONFIG_PATH=$HOME/.kube/config
 
       - name: plan
         run: terraform plan

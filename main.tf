@@ -8,13 +8,13 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_name
-  depends_on = [ module.eks ]
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
 }
 
 data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-  depends_on = [ module.eks ]
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
 }
 
 # VPC
@@ -22,11 +22,11 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.4.0"
 
-  name                 = "vpc-${var.vpc_name}"
-  cidr                 = "10.0.0.0/16"
-  azs                  = slice(data.aws_availability_zones.available.names, 0, 3)
-  private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets       = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  name            = "vpc-${var.vpc_name}"
+  cidr            = "10.0.0.0/16"
+  azs             = slice(data.aws_availability_zones.available.names, 0, 3)
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -34,12 +34,12 @@ module "vpc" {
 
   public_subnet_tags = {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                      = "1"
+    "kubernetes.io/role/elb"                    = "1"
   }
 
   private_subnet_tags = {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"             = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
   }
 }
 
@@ -48,10 +48,10 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "19.21.0"
 
-  cluster_name    = "${var.cluster_name}"
-  cluster_version = "1.28"
+  cluster_name                   = var.cluster_name
+  cluster_version                = "1.28"
   cluster_endpoint_public_access = true
-  
+
   vpc_id                   = module.vpc.vpc_id
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.private_subnets
@@ -62,17 +62,18 @@ module "eks" {
       AmazonSSMReadOnlyAccess = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
       SecretsManagerReadWrite = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
       AmazonSQSFullAccess     = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+      AmazonSNSFullAccess     = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
     }
   }
 
   eks_managed_node_groups = {
     one = {
-      name = "ng-${var.cluster_name}-1"
+      name             = "ng-${var.cluster_name}-1"
       min_capacity     = 2
       max_capacity     = 3
       desired_capacity = 1
     }
-    
+
   }
 }
 
@@ -94,7 +95,7 @@ module "lb_role" {
 
 
 # Use the AWS Load Balancer Controller Helm chart to deploy the controller
-resource "helm_release" "aws_load_balancer_controller" { 
+resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
@@ -121,11 +122,11 @@ resource "helm_release" "aws_load_balancer_controller" {
   # }
 
   set {
-    name = "image.repository"
+    name  = "image.repository"
     value = "602401143452.dkr.ecr.${var.aws_region}.amazonaws.com/amazon/aws-load-balancer-controller"
   }
 
-  depends_on = [ kubernetes_service_account.eks_lb_service_account ]
+  depends_on = [kubernetes_service_account.eks_lb_service_account]
 }
 
 # Create EKS Service Account
@@ -142,7 +143,7 @@ resource "kubernetes_service_account" "eks_lb_service_account" {
       "eks.amazonaws.com/sts-regional-endpoints" = "true"
     }
   }
-  depends_on = [ module.lb_role ]
+  depends_on = [module.lb_role]
 }
 
 # Create EKS pods Role
@@ -160,7 +161,7 @@ resource "aws_iam_role" "eks_pods_role" {
       }
     ]
   })
-  depends_on = [ module.eks ]
+  depends_on = [module.eks]
 }
 
 # Create EKS pods Policy
@@ -207,13 +208,28 @@ resource "aws_iam_role_policy" "eks_pods_role_policy" {
           "sqs:CreateQueue",
           "sqs:DeleteQueue"
         ]
-        Effect   =  "Allow"
-        Resource =  "*"
+        Effect   = "Allow"
+        Resource = "*"
+      },
+      {
+        Action = [
+          "sns:ListTopics",
+          "sns:DeleteTopic",
+          "sns:CreateTopic",
+          "sns:GetTopicAttributes",
+          "sns:Subscribe",
+          "sns:ListSubscriptions",
+          "sns:ListSubscriptionsByTopic",
+          "sns:ConfirmSubscription",
+          "sns:Publish"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
       }
     ]
   })
 
-  depends_on = [ aws_iam_role.eks_pods_role ]
+  depends_on = [aws_iam_role.eks_pods_role]
 }
 
 # Install the Secrets Store CSI Driver
@@ -221,8 +237,8 @@ resource "helm_release" "secret_store_driver" {
   name       = "csi-secrets-store"
   chart      = "secrets-store-csi-driver"
   repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
-  depends_on = [ data.aws_eks_cluster_auth.cluster ]
-  
+  depends_on = [data.aws_eks_cluster_auth.cluster]
+
   set {
     name  = "syncSecret.enabled"
     value = true
@@ -238,7 +254,7 @@ resource "helm_release" "secret_store_driver_provider_aws" {
   name       = "secrets-provider-aws"
   chart      = "secrets-store-csi-driver-provider-aws"
   repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
-  depends_on = [ helm_release.secret_store_driver ]
+  depends_on = [helm_release.secret_store_driver]
 }
 
 
