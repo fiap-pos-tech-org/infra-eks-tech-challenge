@@ -21,6 +21,9 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.1
+      
+      - name: Exporting kube config
+        run: export KUBE_CONFIG_PATH=$HOME/.kube/config
 
       - name: destroy
         run: terraform destroy -auto-approve
